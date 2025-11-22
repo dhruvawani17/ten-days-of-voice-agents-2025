@@ -1,4 +1,5 @@
 import logging
+import os
 
 from dotenv import load_dotenv
 from livekit.agents import (
@@ -12,11 +13,12 @@ from livekit.agents import (
     cli,
     metrics,
     tokenize,
-    # function_tool,
-    # RunContext
+    function_tool,
+    RunContext,
 )
 from livekit.plugins import murf, silero, google, deepgram, noise_cancellation
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
+from order_store import BRAND_NAME, save_order_to_disk
 
 logger = logging.getLogger("agent")
 
@@ -26,10 +28,28 @@ load_dotenv(".env.local")
 class Assistant(Agent):
     def __init__(self) -> None:
         super().__init__(
-            instructions="""You are a helpful voice AI assistant. The user is interacting with you via voice, even if you perceive the conversation as text.
-            You eagerly assist users with their questions by providing information from your extensive knowledge.
-            Your responses are concise, to the point, and without any complex formatting or punctuation including emojis, asterisks, or other symbols.
-            You are curious, friendly, and have a sense of humor.""",
+            instructions=f"""
+You are a friendly coffee shop barista for the brand '{BRAND_NAME}'.
+You take voice orders and interact conversationally to complete an order.
+
+Maintain this order state (fill all fields before finishing):
+{{
+    "drinkType": "string",
+    "size": "string",
+    "milk": "string",
+    "extras": ["string"],
+    "name": "string"
+}}
+
+Behavior rules:
+- Ask clarifying questions until every field in the order state is filled.
+- Keep questions short and natural (e.g., "What size would you like?" or "Any milk preference?").
+- Confirm choices when ambiguous (e.g., "Do you want oat milk or regular milk?").
+- When the order is complete, call the tool `save_order` with the final order object (exactly matching the shape above).
+- Use the tool response to craft a final spoken summary prefixed with "Order summary:" so the UI can highlight it.
+
+Tone: friendly, warm, helpful, and slightly upbeat. Use simple sentences suitable for a voice response.
+""",
         )
 
     # To add tools, use the @function_tool decorator.
@@ -52,6 +72,32 @@ class Assistant(Agent):
 
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
+
+
+ORDERS_DIR = os.getenv("ORDERS_DIR")
+
+
+@function_tool
+async def save_order(ctx: RunContext, order: dict):
+    """Persist a completed order and return its summary.
+
+    Args:
+        order: Dict with drinkType, size, milk, extras (list), and name.
+    Returns:
+        {"path": str, "summary": str, "order": dict} or {"error": str}
+    """
+
+    try:
+        result = save_order_to_disk(order, directory=ORDERS_DIR)
+    except ValueError as exc:
+        logger.warning("Order validation failed: %s", exc)
+        return {"error": str(exc)}
+    except Exception as exc:  # pragma: no cover - safety net
+        logger.exception("Failed to save order")
+        return {"error": f"Failed to save order: {exc}"}
+
+    logger.info("Saved %s order for %s", BRAND_NAME, result["order"]["name"])
+    return result
 
 
 async def entrypoint(ctx: JobContext):

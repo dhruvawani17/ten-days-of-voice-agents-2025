@@ -13,6 +13,27 @@ A complete starter project for building voice AI apps with [LiveKit Agents for P
 
 **Based on:** [livekit-examples/agent-starter-python](https://github.com/livekit-examples/agent-starter-python)
 
+## ☕️ Sunrise Coffee barista (what's new)
+
+This fork turns the starter agent into **Sunrise Coffee**, a friendly barista that:
+
+- Maintains a structured order state
+
+  ```json
+  {
+    "drinkType": "string",
+    "size": "string",
+    "milk": "string",
+    "extras": ["string"],
+    "name": "string"
+  }
+  ```
+- Keeps asking clarifying questions until every field is filled.
+- Calls the `save_order` tool to persist the order, which produces a neat summary (spoken + text).
+- Stores every completed order as JSON under `backend/orders/` (configurable via `ORDERS_DIR`). Each file contains the normalized order, the generated summary, and a timestamp so you can display the summary anywhere in your app.
+
+You can customize the branding message that the agent uses by setting `COFFEE_BRAND` (defaults to `Sunrise Coffee`).
+
 The starter project includes:
 
 - A simple voice AI assistant, ready for extension and customization
@@ -71,6 +92,11 @@ Sign up for [LiveKit Cloud](https://cloud.livekit.io/) then set up the environme
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
 
+Optional coffee-agent variables:
+
+- `COFFEE_BRAND`: Override the spoken brand name (default `Sunrise Coffee`).
+- `ORDERS_DIR`: Directory where JSON orders are saved (default `backend/orders`).
+
 You can load the LiveKit environment automatically using the [LiveKit CLI](https://docs.livekit.io/home/cli/cli-setup):
 
 ```bash
@@ -126,6 +152,12 @@ This project includes a complete suite of evals, based on the LiveKit Agents [te
 
 ```console
 uv run pytest
+```
+
+To run only the order persistence tests (which do not require the LiveKit dependencies), use:
+
+```console
+uv run pytest tests/test_order_store.py
 ```
 
 ## Using this template repo for your own project

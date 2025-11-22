@@ -9,24 +9,37 @@ type ConnectionDetails = {
   participantToken: string;
 };
 
-// NOTE: you are expected to define the following environment variables in `.env.local`:
+// NOTE: you are expected to define the following environment variables in `.env.local`.
+// Allow a fallback for LIVEKIT_URL to `NEXT_PUBLIC_LIVEKIT_URL` so local dev using
+// the frontend-public value will still work for server-side routes.
 const API_KEY = process.env.LIVEKIT_API_KEY;
 const API_SECRET = process.env.LIVEKIT_API_SECRET;
-const LIVEKIT_URL = process.env.LIVEKIT_URL;
+const LIVEKIT_URL = process.env.LIVEKIT_URL ?? process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
 // don't cache the results
 export const revalidate = 0;
 
 export async function POST(req: Request) {
   try {
-    if (LIVEKIT_URL === undefined) {
-      throw new Error('LIVEKIT_URL is not defined');
+    // Validate required server-side env vars and return a structured JSON error
+    // instead of throwing a raw Error (which surfaces a stack trace in logs).
+    if (!LIVEKIT_URL) {
+      return NextResponse.json(
+        { error: 'LIVEKIT_URL is not defined. Set LIVEKIT_URL (or NEXT_PUBLIC_LIVEKIT_URL) in .env.local or your environment.' },
+        { status: 500 }
+      );
     }
-    if (API_KEY === undefined) {
-      throw new Error('LIVEKIT_API_KEY is not defined');
+    if (!API_KEY) {
+      return NextResponse.json(
+        { error: 'LIVEKIT_API_KEY is not defined. Set LIVEKIT_API_KEY in .env.local or your environment.' },
+        { status: 500 }
+      );
     }
-    if (API_SECRET === undefined) {
-      throw new Error('LIVEKIT_API_SECRET is not defined');
+    if (!API_SECRET) {
+      return NextResponse.json(
+        { error: 'LIVEKIT_API_SECRET is not defined. Set LIVEKIT_API_SECRET in .env.local or your environment.' },
+        { status: 500 }
+      );
     }
 
     // Parse agent configuration from request body

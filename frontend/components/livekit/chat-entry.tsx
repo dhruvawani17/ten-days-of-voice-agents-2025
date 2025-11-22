@@ -28,6 +28,8 @@ export const ChatEntry = ({
 }: ChatEntryProps) => {
   const time = new Date(timestamp);
   const title = time.toLocaleTimeString(locale, { timeStyle: 'full' });
+  const isOrderSummary = /^order summary:/i.test(message.trim());
+  const summaryBody = isOrderSummary ? message.replace(/^order summary:/i, '').trim() : message;
 
   return (
     <li
@@ -50,11 +52,22 @@ export const ChatEntry = ({
       </header>
       <span
         className={cn(
-          'max-w-4/5 rounded-[20px]',
-          messageOrigin === 'local' ? 'bg-muted ml-auto p-2' : 'mr-auto'
+          'max-w-[80%] rounded-[20px] text-sm leading-relaxed',
+          messageOrigin === 'local'
+            ? 'bg-muted ml-auto p-2'
+            : isOrderSummary
+              ? 'mr-auto block rounded-2xl border border-amber-200 bg-amber-50/90 p-3 text-amber-900 shadow-sm'
+              : 'mr-auto'
         )}
       >
-        {message}
+        {isOrderSummary ? (
+          <>
+            <p className="font-semibold uppercase tracking-wide text-xs text-amber-700">Order summary</p>
+            <p className="mt-1 text-base font-medium text-amber-900">{summaryBody}</p>
+          </>
+        ) : (
+          message
+        )}
       </span>
     </li>
   );
